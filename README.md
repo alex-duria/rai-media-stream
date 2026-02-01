@@ -1,6 +1,6 @@
 # Recall - Media Stream Agent with Persistent Meeting Context
 
-An AI agent that lives inside your recurring meetings and maintains persistent memory across the entire product lifecycle. Discovery conversations inform sprint planning. Last quarter's architectural decisions are instantly accessible during implementation. Context compounds instead of evaporating.
+An AI agent that lives inside your recurring or product specific meetings and maintains persistent memory across the entire product lifecycle. Discovery conversations inform sprint planning. Last quarter's architectural decisions are instantly accessible during implementation. Context compounds instead of evaporating. Inject  meeting context into any meeting by providing segemnt key to media agent bot. 
 
 Built on [Recall.ai](https://recall.ai) for meeting access and real-time transcription.
 
