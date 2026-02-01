@@ -1,45 +1,117 @@
-# Recall - Meeting Memory Bot
+# Recall - Media Stream Agent with Persistent Meeting Context
 
-A voice-enabled meeting bot that remembers context across recurring meetings using RAG (Retrieval-Augmented Generation). Built on [Recall.ai](https://recall.ai) for meeting access and transcription.
+An AI agent that lives inside your recurring meetings and maintains persistent memory across the entire product lifecycle. Discovery conversations inform sprint planning. Last quarter's architectural decisions are instantly accessible during implementation. Context compounds instead of evaporating.
+
+Built on [Recall.ai](https://recall.ai) for meeting access and real-time transcription.
 
 ---
 
-## How to Interact with the Bot
+## Why This Matters
 
-Once the bot joins your meeting, you can interact with it using voice:
+**Meetings are where decisions happen. But decisions don't stay in meetings.**
 
-### Wake Word: "Recall"
+Product teams run dozens of recurring meetings: standups, sprint planning, design reviews, stakeholder syncs, retros. Each meeting builds on the last—but the context doesn't carry forward. Teams waste time re-explaining decisions, re-debating settled questions, and onboarding people who missed critical conversations.
 
-**Option 1: Two-step (recommended for noisy meetings)**
-1. Say: **"Recall"**
-2. Bot responds: **"Yes?"**
-3. Ask your question: **"What did we discuss about pricing last week?"**
+**This agent solves that by giving your meeting series a persistent memory.**
 
-**Option 2: Direct question**
-- Say: **"Recall, tell me about the API integration we discussed"**
-- Bot responds directly with the answer
+- **Continuity across product cycles**: What was discussed in discovery is accessible during development. Decisions from Q1 planning inform Q3 execution.
+- **Institutional knowledge that doesn't evaporate**: Why did we choose this architecture? What were the tradeoffs? The answer isn't buried in someone's notes—it's instantly accessible.
+- **Faster onboarding**: New team members can query months of context without scheduling "catch-up" meetings.
+- **No more "meeting about the meeting"**: Stop spending the first 10 minutes recapping what happened last time.
 
-### Voice Commands
-
-The bot responds to natural leave requests containing keywords like "leave", "go away", "exit", "bye", "goodbye":
-
-| Example | Action |
-|---------|--------|
-| "Recall, please leave" | Bot says goodbye and leaves |
-| "Recall, can you leave the meeting now" | Bot says goodbye and leaves |
-| "Recall, goodbye" | Bot says goodbye and leaves |
-| "Recall" → "Yes?" → "leave" | Bot says goodbye and leaves |
-
-### Chat Commands
-
-Type in meeting chat:
-- `remove`, `leave`, `exit`, or `bye` → Bot leaves the meeting
-
-### Removing the Bot via API
-
-```bash
-curl -X POST https://your-app.example.com/api/bot/{bot_id}/leave
 ```
+Sprint 1 Planning  ─┐
+Sprint 1 Retro     ─┼─► All indexed under "project-alpha-sprints"
+Sprint 2 Planning  ─┤
+Sprint 2 Retro     ─┤
+        ...        ─┤
+Sprint N Planning  ─┘   ← Bot joins with full context of every previous sprint
+```
+
+---
+
+## Recall.ai Features Used
+
+| Feature | How We Use It |
+|---------|---------------|
+| **Bot Metadata** | Store `project_id` and `recurring_meeting_id` to group related meetings |
+| **Metadata Filtering** | Query `GET /bot/?metadata__recurring_meeting_id=X` to find all meetings in a series |
+| **Output Media** | Render a webpage as the bot's "camera" - displays conversation + thinking process |
+| **Audio Injection** | Play AI-generated speech (OpenAI TTS) into the meeting via output media |
+| **Real-time Transcription** | Stream transcripts via webhook for immediate processing |
+| **Transcript Download** | Fetch completed transcripts from past meetings for RAG indexing |
+| **In-Meeting Chat** | Send welcome message, respond to "remove" command |
+| **Automatic Leave** | Configure timeouts for waiting room, empty meeting, silence |
+
+---
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         MEETING                                      │
+│                                                                      │
+│   Participant: "Recall, what did we decide about the API pricing?"  │
+│                              │                                       │
+└──────────────────────────────┼───────────────────────────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      RECALL.AI BOT                                   │
+│                                                                      │
+│   • Captures audio, runs real-time transcription                    │
+│   • Renders "output media" webpage as bot's camera feed             │
+│   • Streams transcript to our server via webhook                    │
+│                              │                                       │
+└──────────────────────────────┼───────────────────────────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      OUR SERVER                                      │
+│                                                                      │
+│   1. Detect wake word "Recall" in transcript                        │
+│   2. Query Recall API: GET /bot/?metadata__recurring_meeting_id=X   │
+│   3. Fetch transcripts from past meetings in series                 │
+│   4. RAG search: find relevant chunks from meeting history          │
+│   5. Generate response with GPT-4o-mini + context                   │
+│   6. Convert to speech with OpenAI TTS                              │
+│   7. Send audio back to output media page                           │
+│                              │                                       │
+└──────────────────────────────┼───────────────────────────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      OUTPUT MEDIA PAGE                               │
+│                                                                      │
+│   • Plays audio response into meeting                               │
+│   • Shows conversation transcript                                   │
+│   • Displays RAG search results (which meetings, similarity scores) │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Ideas for Extension
+
+This agent is a foundation. Here's what you could build on top of it:
+
+### 1. Automated Meeting Artifacts
+Generate and distribute summaries, action items, and decision logs after each meeting. Push them to Slack, email, or Notion automatically. The transcripts are already there—just add a post-meeting processing pipeline.
+
+### 2. Project Management Integration
+Connect action item detection to Jira, Linear, or Asana. When someone says "we need to update the API docs before launch," automatically create a ticket with context from the conversation.
+
+### 3. Async Query Interface
+Build a Slack bot or web dashboard that lets team members query meeting history outside of meetings. "What did we decide about the pricing model?" shouldn't require joining a call.
+
+### 4. Pre-Meeting Intelligence
+Generate briefing docs before meetings start. Pull relevant context from past meetings, open action items, and recent decisions. Participants arrive prepared instead of spending time getting up to speed.
+
+### 5. Cross-Project Pattern Detection
+Analyze meeting data across multiple project series to surface organizational patterns. Which projects have the most blockers? Where are decisions getting revisited? What topics consume the most meeting time?
+
+### 6. Custom Domain Agents
+Swap in specialized AI personas with domain knowledge. A legal review agent that flags compliance concerns. A technical architecture agent that references your design docs. The meeting interface stays the same—the intelligence layer adapts.
+
+**Explore what's possible**: [Recall.ai API Documentation](https://docs.recall.ai/)
 
 ---
 
@@ -49,216 +121,125 @@ curl -X POST https://your-app.example.com/api/bot/{bot_id}/leave
 
 - Python 3.11+
 - Node.js 18+
-- [ngrok](https://ngrok.com) account (free tier works)
+- [ngrok](https://ngrok.com) (free tier works)
 - [Recall.ai API key](https://recall.ai)
 - [OpenAI API key](https://platform.openai.com)
 
-### Step 1: Install Dependencies
+### Setup
 
 ```bash
-# Clone and enter the repository
-git clone <repo-url>
-cd rai-media-stream
-
-# Install Python dependencies
+# Install dependencies
 pip install -r requirements.txt
-
-# Install and build the client
 cd client && npm install && npm run build && cd ..
 
-# Copy environment template
+# Configure environment
 cp .env.example .env
-```
+# Edit .env with your API keys
 
-### Step 2: Configure Environment
-
-Edit `.env` with your API keys:
-
-```bash
-OPENAI_API_KEY=sk-your-openai-api-key
-RECALL_API_KEY=your-recall-api-key
-RECALL_REGION=us-west-2
-```
-
-### Step 3: Start ngrok Tunnel
-
-Recall.ai needs to reach your local server. Start ngrok:
-
-```bash
+# Start ngrok (Recall.ai needs to reach your server)
 ngrok http 8000
+# Copy the HTTPS URL and update CLIENT_URL and SERVER_URL in .env
+
+# Start server
+python -m uvicorn server.main:app --reload --port 8000
 ```
 
-Copy the HTTPS URL (e.g., `https://abc123.ngrok.io`).
-
-### Step 4: Update Environment URLs
-
-Update `.env` with the ngrok URL:
+### Create a Bot
 
 ```bash
-CLIENT_URL=https://abc123.ngrok.io
-SERVER_URL=https://abc123.ngrok.io
+# With persistent context (RAG enabled)
+python scripts/create_bot.py "https://zoom.us/j/123456789" \
+  --project-id acme-corp \
+  --recurring-meeting-id monday-standup
+
+# Without persistent context (isolated meeting)
+python scripts/create_bot.py "https://zoom.us/j/123456789" \
+  --project-id acme-corp
 ```
 
-### Step 5: Start the Server
+### Seed Sample Data (Optional)
 
-```bash
-python -m uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### Step 6: Seed Sample Data (Optional)
-
-Create sample meeting history for testing RAG:
+Create fake meeting history to test RAG without waiting for real meetings:
 
 ```bash
 python scripts/seed_transcripts.py
 ```
 
-This creates sample meeting series:
-- `monday-standup` - 2 past meetings
-- `sprint-planning` - 1 past meeting
-- `product-review` - 1 past meeting
-
-### Step 7: Create a Bot and Join a Meeting
-
-```bash
-# With meeting memory (gets RAG context from past meetings in series)
-python scripts/create_bot.py "https://zoom.us/j/123456789?pwd=xxx" \
-  --project-id acme-corp \
-  --recurring-meeting-id monday-standup
-
-# Without meeting memory (isolated - no RAG context)
-python scripts/create_bot.py "https://zoom.us/j/123456789?pwd=xxx" \
-  --project-id acme-corp
-```
-
-### Step 8: Interact with the Bot
-
-1. Wait for the bot to join your meeting
-2. Say **"Recall"** - bot will respond with **"Yes?"**
-3. Ask your question: **"What did we discuss last week?"**
-4. Bot responds with information from past meetings in the same series
-
 ---
 
-## Production Deployment
+## Interacting with the Bot
 
-### Environment Variables
+### Voice Commands
 
-```bash
-# Required
-OPENAI_API_KEY=sk-...
-RECALL_API_KEY=...
-RECALL_REGION=us-west-2
+**Wake word: "Recall"**
 
-# Set to your deployed URLs
-CLIENT_URL=https://your-app.example.com
-SERVER_URL=https://your-app.example.com
+| You Say | Bot Does |
+|---------|----------|
+| "Recall" | Responds "Yes?" and waits for your question |
+| "Recall, what did we discuss about X?" | Searches meeting history and responds |
+| "Recall, please leave" | Says goodbye and leaves the meeting |
+| "Recall, goodbye" | Says goodbye and leaves the meeting |
 
-# Data persistence
-DATA_DIR=/app/data
-```
+### Chat Commands
 
-### Deploy to Railway / Render / Fly.io
+Type in meeting chat:
+- `remove`, `leave`, `exit`, `bye` → Bot leaves the meeting
 
-1. Set environment variables in dashboard
-2. Build command: `cd client && npm install && npm run build`
-3. Start command: `gunicorn server.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT`
-
-### Deploy with Docker
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt gunicorn
-
-# Build client
-COPY client/package*.json client/
-RUN cd client && npm install
-COPY client/ client/
-RUN cd client && npm run build
-
-COPY server/ server/
-COPY scripts/ scripts/
-
-ENV DATA_DIR=/app/data
-VOLUME /app/data
-
-EXPOSE 8000
-CMD ["gunicorn", "server.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
-```
-
-### Configure Webhooks (Optional)
-
-For automatic RAG indexing when meetings end:
-
-1. Go to Recall.ai dashboard → Webhooks
-2. Add endpoint: `https://your-app.example.com/webhooks/recall/`
-3. Select events: `bot.status_change`, `transcript.done`
-
----
-
-## Using the Bot (Deployed)
-
-### Create a Bot via API
+### API
 
 ```bash
-curl -X POST https://your-app.example.com/api/bot \
-  -H "Content-Type: application/json" \
-  -d '{
-    "meeting_url": "https://zoom.us/j/123456789",
-    "project_id": "acme-corp",
-    "recurring_meeting_id": "monday-standup",
-    "bot_name": "Recall"
-  }'
-```
-
-### Create a Bot via CLI
-
-```bash
-python scripts/create_bot.py "https://zoom.us/j/123456789" \
-  --project-id acme-corp \
-  --recurring-meeting-id monday-standup
-```
-
-### Check Bot Status
-
-```bash
-curl https://your-app.example.com/api/bot/{bot_id}
-```
-
-### Remove Bot from Meeting
-
-```bash
-curl -X POST https://your-app.example.com/api/bot/{bot_id}/leave
+# Remove bot
+curl -X POST https://your-server/api/bot/{bot_id}/leave
 ```
 
 ---
 
-## RAG Isolation Model
+## RAG Isolation
 
 The `recurring_meeting_id` controls what context the bot can access:
 
-| Scenario | RAG Behavior |
-|----------|--------------|
-| `recurring_meeting_id="monday-standup"` | Queries ONLY past "monday-standup" meetings |
-| `recurring_meeting_id="sprint-planning"` | Queries ONLY past "sprint-planning" meetings |
-| No `recurring_meeting_id` | **NO RAG context** - meeting is completely isolated |
+| Configuration | Behavior |
+|---------------|----------|
+| `recurring_meeting_id="monday-standup"` | Queries only past "monday-standup" meetings |
+| `recurring_meeting_id="sprint-planning"` | Queries only past "sprint-planning" meetings |
+| No `recurring_meeting_id` | No RAG context - meeting is completely isolated |
 
-This prevents context bleeding between different meeting types and ensures sensitive meetings stay private.
+This prevents context bleeding between different meeting types.
 
 ---
 
-## Features
+## Project Structure
 
-- **Meeting Memory**: Groups related meetings for isolated RAG context
-- **Privacy-First**: Meetings without `recurring_meeting_id` get NO RAG context
-- **Wake Word Activation**: Say "Recall" to get the bot's attention
-- **Voice Commands**: Tell the bot to leave via voice
-- **Real-time Transcription**: Low-latency streaming via Recall.ai
-- **Action Item Detection**: Captures "remind me to...", "follow up on..."
-- **Multi-Platform**: Zoom, Google Meet, Microsoft Teams
+```
+server/
+├── main.py                 # FastAPI app, WebSocket endpoint
+├── websocket_handler.py    # Handles output media WebSocket connection
+├── config.py               # Environment configuration
+├── constants.py            # Wake words, leave keywords, etc.
+├── models.py               # Pydantic models
+├── state.py                # In-memory state (active bots, handlers)
+├── recall/
+│   └── client.py           # Recall.ai API client
+├── rag/
+│   └── engine.py           # Vector cache, embedding, search
+├── ai/
+│   └── responder.py        # GPT-4o-mini responses, TTS
+├── memory/
+│   └── action_items.py     # Action item detection
+└── routers/
+    ├── bots.py             # Bot CRUD endpoints
+    ├── projects.py         # RAG context endpoints
+    └── webhooks.py         # Recall.ai webhook handlers
+
+client/
+└── src/
+    └── main.ts             # Output media page (bot's camera)
+
+scripts/
+├── create_bot.py           # CLI to create bots
+├── seed_transcripts.py     # Generate sample meeting data
+└── sync_project.py         # Manually sync RAG index
+```
 
 ---
 
@@ -270,71 +251,23 @@ This prevents context bleeding between different meeting types and ensures sensi
 |--------|------|-------------|
 | `POST` | `/api/bot` | Create a bot |
 | `GET` | `/api/bot/{bot_id}` | Get bot status |
-| `POST` | `/api/bot/{bot_id}/chat` | Send chat message into meeting |
 | `POST` | `/api/bot/{bot_id}/leave` | Remove bot from meeting |
+| `POST` | `/api/bot/{bot_id}/chat` | Send chat message |
 
 ### RAG Context
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/projects/{id}/context?query=...&recurring_meeting_id=...` | Query RAG |
-| `POST` | `/api/projects/{id}/sync?recurring_meeting_id=...` | Sync index |
+| `POST` | `/api/projects/{id}/sync?recurring_meeting_id=...` | Force sync index |
 
-### Webhooks
+### Webhooks (for Recall.ai)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/webhooks/recall/` | Recall.ai event webhook |
+| `POST` | `/webhooks/recall/` | Bot status changes |
 | `POST` | `/webhooks/recall/transcript` | Real-time transcript data |
-| `POST` | `/webhooks/recall/chat` | Real-time chat messages |
-
----
-
-## CLI Scripts
-
-```bash
-# Create a bot
-python scripts/create_bot.py <meeting_url> \
-  --project-id <id> \
-  --recurring-meeting-id <series-id> \
-  --bot-name "Recall"
-
-# Seed sample meeting data
-python scripts/seed_transcripts.py
-
-# Sync project index
-python scripts/sync_project.py <recurring_meeting_id> --force
-```
-
----
-
-## Architecture
-
-```
-Meeting Participants
-         │
-         ▼
-┌─────────────────┐
-│   Recall Bot    │ ← Joins meeting, captures audio
-└────────┬────────┘
-         │ Real-time transcription
-         ▼
-┌─────────────────┐
-│  Output Media   │ ← Webpage rendered as bot's "camera"
-│  (Client)       │    Shows conversation + thinking process
-└────────┬────────┘
-         │ WebSocket (transcripts → server, audio ← server)
-         ▼
-┌─────────────────┐
-│  FastAPI Server │ ← RAG queries, AI response generation
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Recall.ai API  │ ← Transcript storage, bot management
-│  OpenAI API     │ ← GPT-4o-mini for responses, TTS for audio
-└─────────────────┘
-```
+| `POST` | `/webhooks/recall/chat` | Chat message events |
 
 ---
 
@@ -346,25 +279,10 @@ Meeting Participants
 | `RECALL_API_KEY` | Recall.ai API key | Required |
 | `RECALL_REGION` | Recall.ai region | `us-west-2` |
 | `CLIENT_URL` | Public URL for output media | `http://localhost:5173` |
-| `SERVER_URL` | Public URL for server | `http://localhost:8000` |
+| `SERVER_URL` | Public URL for webhooks | `http://localhost:8000` |
 | `DATA_DIR` | Data storage directory | `data` |
-| `RAG_SIMILARITY_THRESHOLD` | Min similarity score | `0.15` |
+| `RAG_SIMILARITY_THRESHOLD` | Min similarity for results | `0.20` |
 | `RAG_TOP_K` | Max results per query | `5` |
-
----
-
-## Recall.ai Features Used
-
-| Feature | Usage |
-|---------|-------|
-| **Bot Creation** | Custom metadata for project/meeting isolation |
-| **Output Media** | Webpage as bot's camera + audio injection |
-| **Real-time Transcription** | Low-latency streaming transcription |
-| **Perfect Diarization** | Accurate speaker attribution |
-| **In-Meeting Chat** | Welcome message, "remove" command |
-| **Automatic Leave** | Smart timeouts for waiting room, silence, empty meeting |
-| **Speaker Timeline** | Post-meeting speaker events |
-| **Webhooks** | `transcript.done`, `bot.status_change` |
 
 ---
 
